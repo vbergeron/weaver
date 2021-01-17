@@ -4,32 +4,37 @@ import scala.io.Source
 import scala.quoted.Expr
 import scala.quoted.staging._
 
+import model._
+import scala.quoted._
+
 sealed trait DataSource {
-  def readRecords(reader: Schema => Expr[Record => Unit]): Unit
+  def readSchema:Schema
+  def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit]
+
+  def query:Query.Scan = Query.Scan(this)
 }
 
 object DataSource {
 
-  given Toolbox = Toolbox.make(getClass.getClassLoader)
-
-  def compileReader(schema:Schema, reader: Schema => Expr[Record => Unit]):Record => Unit =
-    run {
-      val stagedReader: Expr[Record => Unit] = reader(schema)
-      println(stagedReader.show)
-      stagedReader
-    }
-
-
   case class CSV(name: String) extends DataSource {
-    def readRecords(reader: Schema => Expr[Record => Unit]): Unit = {
-      //val source = Source.fromFile(name)
-      //val lines = source.getLines()
-      //val schema = Schema(lines.next().split(","))
 
-      //val compiledReader = compileReader(schema,reader)
+    def readSchema: Schema = {
+      val source = Source.fromFile(name)
+      val lines = source.getLines()
+      val schema = Schema(lines.next().split(","))
+      source.close()
+      schema
+    }
+  
+    given Toolbox = Toolbox.make(getClass.getClassLoader)
 
-      ////lines.foreach(line => compiledReader.apply(Record(schema, line.split(","))))
-      //source.close()
+    def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit] = '{
+      val source = Source.fromFile(${Expr(name)})
+      val lines = source.getLines()
+      val schema = Schema(lines.next().split(","))
+      val matReader = $reader
+      lines.foreach(line => matReader.apply(Record(line.split(","))))
+      source.close()
     }
   }
 

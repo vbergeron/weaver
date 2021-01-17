@@ -1,30 +1,44 @@
 import scala.quoted._
 
 object model {
+
+  type Reader = Record => Unit
   
   case class Schema(columns: Array[String]) {
     override def toString: String =
       columns.mkString("[", ",", "]")
   }
 
-  case class Record(fields: Array[String])
+  case class Record(fields: Array[String]) {
+    override def toString: String =
+      fields.mkString("[", ",", "]")
+  }
 
 
   enum Reference {
-    case Column(name:String)
-    case Constant(value:String)
+    case Col(name:String)
+    case Lit(value:String)
+
+    def ==(that:Reference) =
+      Predicate(this, that)
   }
+
+  def col(name:String):Reference = 
+    Reference.Col(name)
+  
+  def lit(value:String):Reference = 
+    Reference.Lit(value)
 
   object Reference {
     def deref(schema:Schema, ref:Reference)(rec:Expr[Record])(using Quotes):Expr[String] = ref match {
-      case Column(name)    => '{$rec.fields(${Expr(schema.columns.indexOf(name))})}
-      case Constant(value) => Expr(value)
+      case Col(name)  => '{$rec.fields(${Expr(schema.columns.indexOf(name))})}
+      case Lit(value) => Expr(value)
     }
   }
 
   final case class Predicate(left:Reference, right:Reference)
   
-  def compileFilter(schema:Schema, pred:Predicate)(cont:Expr[Record => Unit])(using Quotes):Expr[Record => Unit] = '{
+  def compileFilter(schema:Schema, pred:Predicate)(cont:Expr[Reader])(using Quotes):Expr[Reader] = '{
     rec => {
       val lhs:String = ${Reference.deref(schema, pred.left)('rec)}
       val rhs:String = ${Reference.deref(schema, pred.right)('rec)}
@@ -34,7 +48,7 @@ object model {
     }
   }
   
-  def compileProjection(from:Schema, to:Schema)(cont:Expr[Record => Unit])(using Quotes):Expr[Record => Unit] = {
+  def compileProjection(from:Schema, to:Schema)(cont:Expr[Reader])(using Quotes):Expr[Reader] = {
     val indexes = to.columns.map(c => from.columns.indexOf(c))
     '{ rec => {
       val acc = new Array[String](${Expr(indexes.length)})
@@ -48,5 +62,12 @@ object model {
       ${Expr.betaReduce('{$cont.apply(res)})}
     }}
   }
+
+  def compilePrint(schema:Schema)(using Quotes):Expr[Reader] =
+    '{rec => println(${Expr(schema.toString)} +"," + rec.toString)}
+
+  def noReader(using Quotes):Expr[Reader] = 
+    '{_ => ()}
+
 }
   

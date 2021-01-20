@@ -2,6 +2,7 @@ import scala.quoted.staging._
 import scala.quoted._
 
 import model._
+import Query._
 
 object Main {
     
@@ -9,15 +10,9 @@ object Main {
       
 
   def main(args: Array[String]): Unit = {
-    val base = Schema(Array("a", "b", "c"))
-    
-    val source = DataSource.CSV("records.csv")
-
-    val query = source
+    val query = DataSource.CSV("records.csv")
       .query
-      .project(Schema(Array("name")))
-      .filter(col("name") == lit("Valentin"))
-      .print
+      .filter(col("name") != lit("Valentin"))
 
     val task = Compiler.compile(query)
 

@@ -1,3 +1,3 @@
 enum Operator {
-  case EQ
+  case EQ, NE
 }

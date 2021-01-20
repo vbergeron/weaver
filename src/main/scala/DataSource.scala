@@ -7,35 +7,37 @@ import scala.quoted.staging._
 import model._
 import scala.quoted._
 
-sealed trait DataSource {
+sealed trait DataSource:
   def readSchema:Schema
   def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit]
 
   def query:Query.Scan = Query.Scan(this)
-}
 
-object DataSource {
 
-  case class CSV(name: String) extends DataSource {
+object DataSource:
 
-    def readSchema: Schema = {
+  case class CSV(name: String) extends DataSource:
+
+    def readSchema: Schema =
       val source = Source.fromFile(name)
       val lines = source.getLines()
       val schema = Schema(lines.next().split(","))
       source.close()
       schema
-    }
-  
-    given Toolbox = Toolbox.make(getClass.getClassLoader)
-
-    def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit] = '{
+    
+    def readRecordsRaw(reader:Reader): Unit =
       val source = Source.fromFile(${Expr(name)})
       val lines = source.getLines()
-      val schema = Schema(lines.next().split(","))
-      val matReader = $reader
-      lines.foreach(line => matReader.apply(Record(line.split(","))))
+      lines.next() // skip header
+      lines.foreach(line => reader(Record(line.split(","))))
+      source.close()
+  
+  
+    def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit] = '{
+      val rowReader = $reader
+      val source = Source.fromFile(${Expr(name)})
+      val lines = source.getLines()
+      lines.next() // skip header
+      lines.foreach(line => rowReader(Record(line.split(","))))
       source.close()
     }
-  }
-
-}

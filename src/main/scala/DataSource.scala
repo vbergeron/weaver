@@ -26,7 +26,7 @@ object DataSource:
       schema
     
     def readRecordsRaw(reader:Reader): Unit =
-      val source = Source.fromFile(${Expr(name)})
+      val source = Source.fromFile(name)
       val lines = source.getLines()
       lines.next() // skip header
       lines.foreach(line => reader(Record(line.split(","))))

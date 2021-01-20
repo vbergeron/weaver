@@ -66,7 +66,7 @@ object Compiler:
     val indices = agg.parent.schema.columns.map(c => agg.by.columns.indexOf(c))
     '{ 
       val acc = Map.empty[Array[String], List[Record]] 
-      ${compileM(agg.parent, '{rec => acc += Array("yolo") -> rec})}
+      //${compileM(agg.parent, '{rec => acc += Array("yolo") -> rec})}
     }
     
   def compilePrint(schema:Schema)(using Quotes):Expr[Reader] =

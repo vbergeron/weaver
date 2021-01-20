@@ -13,6 +13,8 @@ object Main {
     val query = DataSource.CSV("records.csv")
       .query
       .filter(col("name") != lit("Valentin"))
+      .project(Schema(Array("age")))
+      .print
 
     val task = Compiler.compile(query)
 

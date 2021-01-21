@@ -32,12 +32,16 @@ object DataSource:
       lines.foreach(line => reader(Record(line.split(","))))
       source.close()
   
-  
     def readRecords(reader:Expr[Reader])(using Quotes): Expr[Unit] = '{
-      val rowReader = $reader
-      val source = Source.fromFile(${Expr(name)})
+      val records = CSV.recordIterator(${Expr(name)})
+      while records.hasNext do
+        ${Expr.betaReduce('{$reader(records.next)})}
+    }
+
+  object CSV:
+
+    def recordIterator(fileName:String) = 
+      val source = Source.fromFile(fileName)
       val lines = source.getLines()
       lines.next() // skip header
-      lines.foreach(line => rowReader(Record(line.split(","))))
-      source.close()
-    }
+      lines.map(line => Record(line.split(",")))

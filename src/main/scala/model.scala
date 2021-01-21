@@ -7,6 +7,12 @@ object model:
   case class Schema(columns: Array[String]):
     override def toString: String =
       columns.mkString("[", ",", "]")
+    
+    def indexOf(field:String):Int =
+      columns.indexOf(field)
+
+    def indicesOf(to:Schema):Array[Int] =
+      to.columns.map(indexOf)
 
   case class Record(fields: Array[String]):
     override def toString: String =

@@ -13,12 +13,9 @@ object Main {
     val query = DataSource.CSV("records.csv")
       .query
       .filter(col("name") != lit("Valentin"))
-      .project(Schema(Array("age")))
-      .print
+      .project(Schema(Array("name")))
 
-    val task = Compiler.compile(query)
-
-    task()
+    val task = Compiler.compile(Query.Join(query, query, Schema(Array("name"))))
 
   }
 
